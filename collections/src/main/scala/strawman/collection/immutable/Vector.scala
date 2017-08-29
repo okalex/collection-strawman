@@ -78,7 +78,7 @@ final class Vector[+A] private[immutable] (private[collection] val startIndex: I
 
   def length: Int = endIndex - startIndex
 
-  /*override*/ def lengthCompare(len: Int): Int = length - len
+  override def lengthCompare(len: Int): Int = length - len
 
   private[collection] def initIterator[B >: A](s: VectorIterator[B]): Unit = {
     s.initFrom(this)

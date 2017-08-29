@@ -16,8 +16,6 @@ trait View[+A] extends Iterable[A] with IterableOps[A, View, View[A]] {
   protected[this] def newSpecificBuilder(): Builder[A, View[A]] =
     immutable.IndexedSeq.newBuilder().mapResult(_.view)
 
-  final protected[this] def coll: this.type = this
-
   override def toString = "View(?)"
 
   override def className = "View"
@@ -99,7 +97,7 @@ object View extends IterableFactoryLike[View] {
   }
 
   /** A view containing values of a given function over a range of integer values starting from 0. */
-  class Tabulate[A](n: Int)(f: Int => A) extends View[A] {
+  case class Tabulate[A](n: Int)(f: Int => A) extends View[A] {
     def iterator(): Iterator[A] = Iterator.tabulate(n)(f)
     override def knownSize: Int = 0 max n
   }

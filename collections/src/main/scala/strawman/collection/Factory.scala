@@ -6,7 +6,7 @@ import strawman.collection.immutable.NumericRange
 import scala.language.implicitConversions
 import strawman.collection.mutable.Builder
 
-import scala.{Any, Int, Integral, Nothing, Ordering}
+import scala.{Any, Int, Integral, Nothing, Ordering, deprecated, `inline`, Some}
 import scala.Predef.implicitly
 import scala.annotation.unchecked.uncheckedVariance
 
@@ -29,8 +29,13 @@ trait Factory[-A, +C] extends Any {
     */
   def fromSpecific(it: IterableOnce[A]): C
 
-  /** A strict builder that eventually produces a `C` */
+  /** Get a Builder for the collection. For non-strict collection types this will use an intermediate buffer.
+    * Building collections with `fromSpecificIterable` is preferred because it can be lazy for lazy collections. */
   def newBuilder(): Builder[A, C]
+
+  @deprecated("Use newBuilder() instead of apply()", "2.13.0")
+  @`inline` def apply(from: Any): Builder[A, C] = newBuilder()
+  //@`inline` def apply(from: From): Builder[A, C] = newBuilder(from)
 }
 
 /** Base trait for companion objects of unconstrained collection types that may require
@@ -150,6 +155,7 @@ object IterableFactory {
   * @tparam CC Collection type constructor (e.g. `List`)
   */
 trait SeqFactory[+CC[_]] extends IterableFactory[CC] {
+  def unapplySeq[A](x: CC[A] @uncheckedVariance): Some[CC[A]] = Some(x) //TODO is uncheckedVariance sound here?
 
   /** Produces a $coll containing the results of some element computation a number of times.
     *  @param   n  the number of elements contained in the $coll.
@@ -164,7 +170,8 @@ trait SeqFactory[+CC[_]] extends IterableFactory[CC] {
     *  @param   elem the element computation
     *  @return  A $coll that contains the results of `n1 x n2` evaluations of `elem`.
     */
-  def fill[A](n1: Int, n2: Int)(elem: => A): CC[CC[A] @uncheckedVariance] = fill(n1)(fill(n2)(elem))
+  def fill[A](n1: Int, n2: Int)(elem: => A): CC[CC[A] @uncheckedVariance] =
+    tabulate(n1)(_ => fill(n2)(elem))
 
   /** Produces a three-dimensional $coll containing the results of some element computation a number of times.
     *  @param   n1  the number of elements in the 1st dimension
@@ -173,7 +180,8 @@ trait SeqFactory[+CC[_]] extends IterableFactory[CC] {
     *  @param   elem the element computation
     *  @return  A $coll that contains the results of `n1 x n2 x n3` evaluations of `elem`.
     */
-  def fill[A](n1: Int, n2: Int, n3: Int)(elem: => A): CC[CC[CC[A]] @uncheckedVariance] = fill(n1)(fill(n2, n3)(elem))
+  def fill[A](n1: Int, n2: Int, n3: Int)(elem: => A): CC[CC[CC[A]] @uncheckedVariance] =
+    tabulate(n1)(_ => fill(n2, n3)(elem))
 
   /** Produces a four-dimensional $coll containing the results of some element computation a number of times.
     *  @param   n1  the number of elements in the 1st dimension
@@ -184,7 +192,7 @@ trait SeqFactory[+CC[_]] extends IterableFactory[CC] {
     *  @return  A $coll that contains the results of `n1 x n2 x n3 x n4` evaluations of `elem`.
     */
   def fill[A](n1: Int, n2: Int, n3: Int, n4: Int)(elem: => A): CC[CC[CC[CC[A]]] @uncheckedVariance] =
-    fill(n1)(fill(n2, n3, n4)(elem))
+    tabulate(n1)(_ => fill(n2, n3, n4)(elem))
 
   /** Produces a five-dimensional $coll containing the results of some element computation a number of times.
     *  @param   n1  the number of elements in the 1st dimension
@@ -196,7 +204,7 @@ trait SeqFactory[+CC[_]] extends IterableFactory[CC] {
     *  @return  A $coll that contains the results of `n1 x n2 x n3 x n4 x n5` evaluations of `elem`.
     */
   def fill[A](n1: Int, n2: Int, n3: Int, n4: Int, n5: Int)(elem: => A): CC[CC[CC[CC[CC[A]]]] @uncheckedVariance] =
-    fill(n1)(fill(n2, n3, n4, n5)(elem))
+    tabulate(n1)(_ => fill(n2, n3, n4, n5)(elem))
 
   /** Produces a $coll containing values of a given function over a range of integer values starting from 0.
     *  @param  n   The number of elements in the $coll
@@ -250,7 +258,6 @@ trait SeqFactory[+CC[_]] extends IterableFactory[CC] {
     */
   def tabulate[A](n1: Int, n2: Int, n3: Int, n4: Int, n5: Int)(f: (Int, Int, Int, Int, Int) => A): CC[CC[CC[CC[CC[A]]]] @uncheckedVariance] =
     tabulate(n1)(i1 => tabulate(n2, n3, n4, n5)(f(i1, _, _, _, _)))
-
 }
 
 object SeqFactory {

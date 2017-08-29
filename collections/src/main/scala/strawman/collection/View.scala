@@ -2,7 +2,7 @@ package strawman.collection
 
 import strawman.collection.mutable.{ArrayBuffer, Builder}
 
-import scala.{Any, Boolean, Equals, IllegalArgumentException, Int, NoSuchElementException, Nothing, annotation, IndexOutOfBoundsException, throws}
+import scala.{Any, Boolean, Equals, IllegalArgumentException, Int, NoSuchElementException, Nothing, annotation, IndexOutOfBoundsException, throws, AnyRef}
 import scala.Predef.{<:<, intWrapper}
 
 /** Concrete collection type: View */
@@ -15,8 +15,6 @@ trait View[+A] extends Iterable[A] with IterableOps[A, View, View[A]] {
 
   protected[this] def newSpecificBuilder(): Builder[A, View[A]] =
     immutable.IndexedSeq.newBuilder().mapResult(_.view)
-
-  final protected[this] def coll: this.type = this
 
   override def toString = "View(?)"
 
@@ -99,7 +97,7 @@ object View extends IterableFactoryLike[View] {
   }
 
   /** A view containing values of a given function over a range of integer values starting from 0. */
-  class Tabulate[A](n: Int)(f: Int => A) extends View[A] {
+  case class Tabulate[A](n: Int)(f: Int => A) extends View[A] {
     def iterator(): Iterator[A] = Iterator.tabulate(n)(f)
     override def knownSize: Int = 0 max n
   }
@@ -284,10 +282,34 @@ object View extends IterableFactoryLike[View] {
 }
 
 /** A trait representing indexable collections with finite length */
-trait ArrayLike[+A] extends Any {
+trait ArrayLike[+A] extends Any { self =>
   def length: Int
   @throws[IndexOutOfBoundsException]
   def apply(i: Int): A
+
+  //TODO used in scala.reflect; this looks like a very specific use case; is it worth keeping?
+  /** Creates a possibly nested `IndexedView` which consists of all the elements
+    *  of this array. If the elements are arrays themselves, the `deep` transformation
+    *  is applied recursively to them. The `className` of the `IndexedView` is
+    *  "Array", hence the `IndexedView` prints like an array with all its
+    *  elements shown, and the same recursively for any subarrays.
+    *
+    *  Example:
+    *  {{{
+    *  Array(Array(1, 2), Array(3, 4)).deep.toString
+    *  }}}
+    *  prints: `Array(Array(1, 2), Array(3, 4))`
+    *
+    *  @return    An possibly nested indexed view consisting of all the elements of the array.
+    */
+  def deep: strawman.collection.IndexedView[Any] = new strawman.collection.IndexedView[Any] {
+    def length = self.length
+    def apply(idx: Int): Any = self.apply(idx) match {
+      case x: AnyRef if x.getClass.isArray => ArrayView.make(x).deep
+      case x => x
+    }
+    override def className = "Array"
+  }
 }
 
 /** View defined in terms of indexing a range */

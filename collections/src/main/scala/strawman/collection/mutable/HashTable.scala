@@ -10,7 +10,6 @@ package strawman
 package collection.mutable
 
 import collection.Iterator
-import collection.arrayToArrayOps
 
 import java.lang.Integer.{numberOfLeadingZeros, rotateRight}
 import scala.util.hashing.byteswap32
@@ -351,9 +350,7 @@ private[mutable] abstract class HashTable[A, B, Entry >: Null <: HashEntry[A, En
     }
   }
 
-  private[collection] def printSizeMap() = {
-    println(sizemap.to(collection.immutable.List))
-  }
+  private[collection] def printSizeMap() = collection.immutable.List.from(sizemap)
 
   protected final def sizeMapDisable() = sizemap = null
 

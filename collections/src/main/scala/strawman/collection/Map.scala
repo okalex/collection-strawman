@@ -3,7 +3,7 @@ package collection
 
 import collection.mutable.Builder
 
-import scala.{Any, Boolean, ClassCastException, Equals, Int, NoSuchElementException, None, Nothing, Option, Ordering, PartialFunction, Serializable, Some, StringContext, `inline`, throws}
+import scala.{Any, Boolean, ClassCastException, Equals, Int, NoSuchElementException, None, Nothing, Option, Ordering, PartialFunction, Serializable, Some, StringContext, `inline`, throws, Unit}
 import scala.Predef.String
 import scala.annotation.unchecked.uncheckedVariance
 import scala.util.hashing.MurmurHash3
@@ -13,8 +13,6 @@ trait Map[K, +V]
   extends Iterable[(K, V)]
     with MapOps[K, V, Map, Map[K, V]]
     with Equals {
-
-  final protected[this] def coll: this.type = this
 
   def canEqual(that: Any): Boolean = true
 
@@ -40,7 +38,6 @@ trait Map[K, +V]
   }
 
   override def hashCode(): Int = Set.unorderedHash(toIterable, "Map".##)
-
 }
 
 /** Base Map implementation type */
@@ -227,3 +224,6 @@ trait MapOps[K, +V, +CC[X, Y] <: MapOps[X, Y, CC, _], +C <: MapOps[K, V, CC, C]]
 }
 
 object Map extends MapFactory.Delegate[Map](immutable.Map)
+
+/** Explicit instantiation of the `Map` trait to reduce class file size in subclasses. */
+abstract class AbstractMap[A, +B] extends AbstractIterable[(A, B)] with Map[A, B]
